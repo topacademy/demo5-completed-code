@@ -1,0 +1,166 @@
+<!-- views/pages/ng.ejs -->
+
+<html lang="en" ng-app='app'>
+<head>
+   <% include ../partials/globals %>
+</head>
+<body class="container">
+
+    <header>
+        <% include ../partials/header %>
+    </header>
+
+    <main>
+        <div class="jumbotron">
+            <h1>Hello to Express and AngularJS</h1>
+            <p>Below is an example of angularjs client-side functionality</p>
+            Enter Text: <input ng-model="echoText"> {{ echoText }}
+        </div>
+        <div>
+            <ng-view></ng-view>
+        </div>
+    </main>
+
+    <footer>
+        <% include ../partials/footer %>
+    </footer>
+
+<!-- Template -->
+<script type="text/ng-template" id="/todos.html">
+<div class="container">
+    <div class="col-sm-8">
+    <div class="well">
+    Search: <input type="text" ng-model="search.name">
+    </div>
+        <table class="table table-bordered table-hover table-striped">
+            <thead>
+            <tr>
+                <th class="text-center">Completed</th>
+                <th class="text-center">Task Name</th>
+                <th class="text-center">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="todo in todos | filter: search">
+                <td><input type="checkbox" ng-model="todo.completed" ng-change="update(todo)"></td>
+                <td contenteditable data-contenteditable ng-model="todo.name" ng-change="update(todo)">{{todo.name}}</td>
+                <td><a ng-href="#/{{todo._id}}">details</a>
+                    <button type="button" class="btn btn-danger" ng-click="remove(todo)">remove</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="col-sm-4">
+        <div class="well">
+            <h3>Look I'm A Sidebar!</h3>
+            New task <input type="text" ng-model="newTodo"><button ng-click="save()">Create</button>
+        </div>
+    </div>
+  </div>
+</script>
+
+<script type="text/ng-template" id="/todoDetails.html">
+<div class="container">
+<div class="col-sm-6">
+  <form>
+    <div class="form-group">
+        <h1>{{todo.name}}</h1>
+    </div>
+    <div class="form-group">
+        <label for="note">Note:</label>
+        <textarea class="form-control" rows="5" id="note" ng-model="todo.note" ng-change="update()"></textarea>
+    </div>
+    <div class="form-group">
+        completed: <input type="checkbox" ng-model="todo.completed" ng-change="update()">
+    </div>
+    <div class="form-group">
+        <label for="updated_at">Last Updated:</label>
+        <pre ng-model="todo.updated_at">{{todo.updated_at | date: 'dd/MM/yyyy: HH:mm:ss'}}</pre>
+    </div>
+    <div class="form-group">
+        <label for="updated_at">Time Now:</label>
+        <pre ng-model="time_now">{{time_now | date: 'dd/MM/yyyy: HH:mm:ss'}}</pre>
+    </div>
+        <a href="/ng">Return to tasks page</a>
+  </div>
+  </form>
+</script>
+    
+<script>
+angular.module('app', ['ngRoute', 'ngResource'])
+    .factory('Todos', ['$resource', function($resource){
+          return $resource('/api/todos/:id', null, {
+            'update': { method: 'PUT'}
+          });
+    }])
+    .controller('TodoController', ['$scope', 'Todos', function ($scope, Todos) {
+        $scope.todos = Todos.query();
+        $scope.save = function(){
+            if(!$scope.newTodo || $scope.newTodo.length < 1) return;
+            var todo = new Todos({ name: $scope.newTodo, completed: false });
+            todo.$save(function(){
+            $scope.todos.push(todo);
+            $scope.newTodo = ''; // clear textbox
+            });
+        }
+        $scope.update = function(todo){
+            Todos.update({id: todo._id}, todo);   
+        }
+	    $scope.remove = function(todo){
+            $scope.todos.splice($scope.todos.indexOf(todo), 1);
+            Todos.remove({id: todo._id});
+        }
+    }])
+    .controller('TodoDetailCtrl', ['$scope', '$routeParams', 'Todos', '$location', function ($scope, $routeParams, Todos, $location) {
+        $scope.todo = Todos.get({id: $routeParams.id });
+        $scope.time_now = new Date().toISOString();
+        $scope.update = function(){
+            $scope.time_now = new Date().toISOString();
+            Todos.update({id: $scope.todo._id}, $scope.todo, function(){
+            $location.url('/' + $scope.todo._id);
+            //$location.url('/');
+            });
+        }
+    }])
+    .config(['$routeProvider', function ($routeProvider) {
+      $routeProvider
+        .when('/', {
+          templateUrl: '/todos.html',
+          controller: 'TodoController'
+        })
+        .when('/:id', {
+            templateUrl: '/todoDetails.html',
+            controller: 'TodoDetailCtrl'
+        }); 
+    }])
+    .directive("contenteditable", function() {
+        return {
+            restrict: "A",
+            require: "ngModel",
+            link: function(scope, element, attrs, ngModel) {
+                function read() {
+                    // view -> model
+                    var html = element.html();
+                    html = html.replace(/&nbsp;/g, "\u00a0");
+                    ngModel.$setViewValue(html);
+                }
+                // model -> view
+                ngModel.$render = function() {
+                    element.html(ngModel.$viewValue || "");
+                };
+                element.bind("blur", function() {
+                    scope.$apply(read);
+                });
+                element.bind("keydown keypress", function (event) {
+                    if(event.which === 13) {
+                        this.blur();
+                        event.preventDefault();
+                    }
+                });
+            }
+	    };
+});
+</script>
+</body>
+</html>

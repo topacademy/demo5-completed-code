@@ -1,0 +1,35 @@
+<!-- views/pages/dbusers.ejs -->
+
+<html lang="en">
+<head>
+   <% include ../partials/globals %>
+</head>
+<body class="container">
+
+    <header>
+        <% include ../partials/header %>
+    </header>
+
+    <main>
+        <div class="jumbotron">
+            <h1>Hello to Express and MongoDB!</h1>
+            <p>Well done, below is a list of database documents</p>
+        </div>
+
+        <div class="row">
+                <%dbusers.forEach( function( dbusers ){ %>
+                    <pre>
+                        Name: <%= dbusers.name %>
+                        Status: <%= dbusers.status %>
+                        Favorite Artist: <%= dbusers.favorites.artist %>
+                        Favorite Food: <%= dbusers.favorites.food %>
+                    </pre> <% }); %>  
+        </div>
+    </main>
+
+    <footer>
+        <% include ../partials/footer %>
+    </footer>
+    
+</body>
+</html>
